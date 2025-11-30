@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+	<title>UT_C2 Engine</title>
+
+	<!-- Standardised web app manifest -->
+	<link rel="manifest" href="appmanifest.json" />
+	
+	<!-- Allow fullscreen mode on iOS devices. (These are Apple specific meta tags.) -->
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, minimal-ui" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+	<link rel="apple-touch-icon" sizes="256x256" href="icon-256.png" />
+	<meta name="HandheldFriendly" content="true" />
+	
+	<!-- Chrome for Android web app tags -->
+	<meta name="mobile-web-app-capable" content="yes" />
+	<link rel="shortcut icon" sizes="256x256" href="icon-256.png" />
+
+    <!-- All margins and padding must be zero for the canvas to fill the screen. -->
+	<style type="text/css">
+		* {
+			padding: 0;
+			margin: 0;
+		}
+		html, body {
+			background: #000;
+			color: #fff;
+			overflow: hidden;
+			touch-action-delay: none;
+			touch-action: none;
+			-ms-touch-action: none;
+		}
+		canvas {
+			touch-action-delay: none;
+			touch-action: none;
+			-ms-touch-action: none;
+		}
+    </style>
+	<style>
+        * { margin: 0; padding: 0; }
+        html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+        #c2canvasdiv { position: relative; width: 100%; height: 100%; }
+        canvas { display: block; margin: auto; background: #000; }
+
+        /* Joystick Styling */
+        #joystick-container { 
+            position: absolute; 
+            width: 140px; 
+            height: 155px; 
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            left: -75px; 
+            bottom: 45px;
+            background-size: cover;
+            z-index: 1000;
+            background-size: contain !important;
+            background-repeat: no-repeat;
+            background-position: center;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: pixelated;
+            opacity: 0.7;
+        }
+        #joystick-handle { 
+            position: absolute; 
+            width: 90px; 
+            height: 105px; 
+            background: rgba(255, 255, 255, 0.5);
+             border-radius: 50%;
+            left: 25px; 
+            bottom: 22.5px;
+            background-size: cover;
+            z-index: 1000;
+            background-size: contain !important;
+            background-repeat: no-repeat;
+            background-position: center;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: pixelated;
+            opacity: 0.7;
+        }
+        #joystick-mk {
+            position: absolute;
+            width: 140px;
+            height: 155px;
+            left: -75px;
+            bottom: 45px;
+            z-index: 1000;
+            background-size: contain !important;
+            background-repeat: no-repeat;
+            background-position: center;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: pixelated;
+            opacity: 0.8;
+            display: none;
+        }
+        
+        /* Arrow Styling */
+        .arrow {
+            position: absolute;
+            z-index: 1000;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.3);
+            text-align: center;
+            line-height: 70px;
+            font-size: 40px;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            background-size: contain !important;
+            background-repeat: no-repeat;
+            background-position: center;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: pixelated;
+            opacity: 0.7;
+        }
+
+        #arrow-up {
+            bottom: 150px;
+            right: -65px;
+        }
+
+        #arrow-left {
+            bottom: 35px;
+            left: -120px;
+        }
+
+        #arrow-right {
+            bottom: 35px;
+            left: -10px;
+        }
+
+        #arrow-down {
+            bottom: 35px;
+            right: -65px;
+        }
+
+        /* Button Styling */
+        .button {
+            position: absolute;
+            z-index: 1000;
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.3);
+            text-align: center;
+            line-height: 70px;
+            font-size: 24px;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            background-size: contain !important;
+            background-repeat: no-repeat;
+            background-position: center;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: pixelated;
+            opacity: 0.7;
+        }
+        .button, .arrow {
+            transform-origin: center center;
+            --btn-scale: 1;
+            --btn-translate-x: 0px;
+            --btn-translate-y: 0px;
+            transform: translate(var(--btn-translate-x), var(--btn-translate-y)) scale(var(--btn-scale));
+        }
+        #joystick-container,
+        #joystick-handle,
+        #joystick-mk {
+            transform-origin: center center;
+            --btn-scale: 1;
+            --btn-translate-x: 0px;
+            --btn-translate-y: 0px;
+            transform: translate(var(--btn-translate-x), var(--btn-translate-y)) scale(var(--btn-scale));
+        }
+        #keyboard-set {
+            width: 35px;
+            height: 35px;
+            right: 15px;
+            top: 15px;
+            line-height: 35px;
+            font-size: 14px;
+            display: block;
+            z-index: 1300;
+        }
+        #settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1100;
+            display: none;
+            pointer-events: none;
+        }
+        #settings-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 220px;
+            height: 220px;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 1400;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .settings-button {
+            position: absolute;
+            width: 90px;
+            height: 40px;
+            line-height: 40px;
+            font-size: 16px;
+            pointer-events: auto;
+            opacity: 1;
+        }
+        #text-scale {
+            top: 15%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #text-opacity {
+            top: 41.7%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #text-joystickscale {
+            top: 58.3%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #text-reset {
+            top: 85%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #toggle-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+        }
+        .layout2 #button-z {
+            width: 70px;
+            height: 70px;
+        }
+        .layout2 #button-x {
+            width: 70px;
+            height: 70px;
+        }
+       .layout2 #button-c {
+            width: 70px;
+            height: 70px;
+        }
+       
+        /* Default positions for layout 1 */
+        #button-z { right: 60px; bottom: 30px; display: none; }
+        #button-x { right: -15px; bottom: 70px; display: none; }
+        #button-c { right: -90px; bottom: 110px; display: none; }
+        #button-f2 { left: -60px; top: 10px; display: none; }
+        #button-f1 { left: 81px; top: 10px; display: none; }
+        #button-debug { position: absolute; left: -130px; top: 10px; display: none; }
+                
+        /* Specific positions for layout 2 */
+        .layout2 #button-z { right: 60px; top: 30px; } /* Specific positions for layout 2 */
+        .layout2 #button-x { right: -15px; top: 30px; } /* Specific positions for layout 2 */
+        .layout2 #button-c { right: -90px; top: 30px; } /* Specific positions for layout 2 */
+        .layout2 #button-f2 { left: -60px; top: 10px; display: none; } /* Specific positions for layout 2 */
+       .layout2 #button-f1 { left: 81px; top: 10px; display: none; } /* Specific positions for layout 2 */
+      .layout2 #button-debug { position: absolute; left: -130px; top: 10px; display: none; } /* Specific positions for layout 2 */
+    </style>
+	
+
+</head> 
+ 
+<body> 
+	<div id="fb-root"></div>
+	
+	<!-- The canvas must be inside a div called c2canvasdiv -->
+	<div id="c2canvasdiv">
+	
+		<!-- The canvas the project will render to.  If you change its ID, don't forget to change the
+		ID the runtime looks for in the jQuery events above (ready() and cr_sizeCanvas()). -->
+		<canvas id="c2canvas" width="640" height="480"></canvas>
+		
+    	<!-- Joystick -->
+        <div id="joystick-container">
+            <div id="joystick-handle"></div>
+	</div>
+        <div id="joystick-mk"></div>
+
+		<!-- Arrow Controls -->
+        <div id="arrow-up" class="arrow">↑</div>
+        <div id="arrow-left" class="arrow">←</div>
+        <div id="arrow-right" class="arrow">→</div>
+        <div id="arrow-down" class="arrow">↓</div>
+
+        <!-- Buttons -->
+        <div id="button-z" class="button">Z</div>
+        <div id="button-x" class="button">X</div>
+        <div id="button-c" class="button">C</div>
+        <div id="toggle-button" class="button">SET</div>
+        <div id="button-f2" class="button">F2</div>
+        <div id="button-f1" class="button">F1</div>
+        <div id="button-debug" class="button">DBG</div>
+        <div id="keyboard-set" class="button">KB</div>
+        <div id="settings-overlay"></div>
+        <div id="settings-panel">
+            <div id="text-scale" class="button settings-button">SIZE</div>
+            <div id="text-opacity" class="button settings-button">OPACITY</div>
+            <div id="text-joystickscale" class="button settings-button">JOY SIZE</div>
+            <div id="text-reset" class="button settings-button">RESET</div>
+        </div>
+	</div>
+	
+	<!-- Pages load faster with scripts at the bottom -->
+	
+	<!-- Construct 2 exported games require jQuery. -->
+	<script src="jquery-3.4.1.min.js"></script>
+
+
+	
+    <!-- The runtime script.  You can rename it, but don't forget to rename the reference here as well.
+    This file will have been minified and obfuscated if you enabled "Minify script" during export. -->
+	<script src="c2runtime.js"></script>
+
+    <script>
+    function simulateMouseEvent(event, simulatedType) {
+	    if (isSettingsMode)
+		    return;
+	    const touch = event.changedTouches[0];
+	    const simulatedEvent = new MouseEvent(simulatedType, {
+    		bubbles: true,
+    		cancelable: true,
+	    	view: window,
+	    	clientX: touch.clientX,
+    		clientY: touch.clientY,
+    		screenX: touch.screenX,
+	    	screenY: touch.screenY,
+     		button: 0
+	    });
+	    touch.target.dispatchEvent(simulatedEvent);
+    }
+
+    document.addEventListener("touchstart", function(e) {
+	simulateMouseEvent(e, "mousedown");
+  }, true);
+
+    document.addEventListener("touchmove", function(e) {
+	simulateMouseEvent(e, "mousemove");
+  }, true);
+
+    document.addEventListener("touchend", function(e) {
+	simulateMouseEvent(e, "mouseup");
+  }, true);
+    </script>
+    <script>
+    // 新增的全局点击处理函数
+    function handleGlobalClick(e) {
+        const isButton = e.target.closest('.button, #arrow-up, #arrow-down, #arrow-left, #arrow-right, #joystick-container, #joystick-handle, #joystick-mk');
+        const canvas = document.getElementById('c2canvas');
+        
+        if (e.target === canvas) return;
+        if (isButton) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const canvasX = e.clientX - rect.left;
+        const canvasY = e.clientY - rect.top;
+
+        // 触发原生点击事件
+        const mouseEvent = new MouseEvent('click', {
+            clientX: e.clientX,
+            clientY: e.clientY,
+            view: window,
+            bubbles: true
+        });
+        canvas.dispatchEvent(mouseEvent);
+
+        // 与C2运行时交互
+        if (window.cr_getC2Runtime) {
+            const runtime = window.cr_getC2Runtime();
+            if (runtime && runtime.mouse) {
+                runtime.mouse._mouseDown({
+                    isTouch: false,
+                    pageX: canvasX,
+                    pageY: canvasY,
+                    preventDefault: () => {}
+                });
+                setTimeout(() => {
+                    runtime.mouse._mouseUp({
+                        isTouch: false,
+                        pageX: canvasX,
+                        pageY: canvasY,
+                        preventDefault: () => {}
+                    });
+                }, 50);
+            }
+        }
+    }
+
+    document.getElementById('c2canvasdiv').addEventListener('click', function (e) {
+        if (!isSettingsMode)
+            handleGlobalClick(e);
+    });
+    document.getElementById('c2canvasdiv').addEventListener('touchstart', function(e) {
+        if (!isSettingsMode)
+            handleGlobalClick(e.touches[0]);
+    });
+
+    function initializeButtonText() {
+        const elements = document.querySelectorAll('.button, #arrow-up, #arrow-down, #arrow-left, #arrow-right, #joystick-container, #joystick-handle');
+        elements.forEach(element => {
+            const text = element.textContent.trim();
+            if (!text) return;
+            element.textContent = '';
+            const span = document.createElement('span');
+            span.textContent = text;
+            element.appendChild(span);
+        });
+    }
+
+    function dedupeElements(list) {
+        const seen = new Set();
+        return list.filter(function (el) {
+            if (!el)
+                return false;
+            if (seen.has(el))
+                return false;
+            seen.add(el);
+            return true;
+        });
+    }
+    
+    function computeAdjustableElements() {
+        const draggableBase = Array.from(document.querySelectorAll('.button, .arrow')).filter(function (el) {
+            return el.id && !NON_DRAGGABLE_IDS.has(el.id);
+        });
+        const joystickDraggables = JOYSTICK_IDS.filter(id => JOYSTICK_DRAGGABLE_IDS.has(id))
+            .map(id => document.getElementById(id))
+            .filter(Boolean);
+        positionableElements = dedupeElements([...draggableBase, ...joystickDraggables]);
+        
+        const generalScaleBase = Array.from(document.querySelectorAll('.button, .arrow')).filter(function (el) {
+            return el.id && !TEXT_BUTTON_IDS.has(el.id) && !JOYSTICK_IDS.includes(el.id);
+        });
+        generalScaleElements = dedupeElements(generalScaleBase);
+        
+        joystickScaleElements = dedupeElements(JOYSTICK_IDS.map(id => document.getElementById(id)).filter(Boolean));
+        
+        opacityElements = dedupeElements([
+            ...generalScaleElements,
+            ...joystickScaleElements
+        ]);
+    }
+    
+    function loadControlImages() {
+        const assetBasePath = "button/";
+        const imageSkipIds = new Set();
+        const elements = [
+            ...document.querySelectorAll('.button, #arrow-up, #arrow-down, #arrow-left, #arrow-right'),
+            document.getElementById('joystick-container'),
+            document.getElementById('joystick-handle'),
+            document.getElementById('joystick-mk')
+        ];
+
+        elements.forEach(element => {
+            const id = element.id;
+            if (!id) return;
+            if (imageSkipIds.has(id)) return;
+
+            const defaultImg = new Image();
+            defaultImg.src = `${assetBasePath}${id}.png`;
+            
+            defaultImg.onload = function() {
+                element.style.backgroundImage = `url(${defaultImg.src})`;
+                element.dataset.defaultImg = defaultImg.src;
+                const span = element.querySelector('span');
+                if(span) span.style.display = 'none';
+                element.style.backgroundColor = 'transparent';
+
+                const pressedImg = new Image();
+                pressedImg.src = `${assetBasePath}${id}1.png`;
+                pressedImg.onload = function() {
+                    element.dataset.pressedImg = pressedImg.src;
+                    element.dataset.hasPressed = true;
+                };
+                pressedImg.onerror = function() {
+                    element.dataset.hasPressed = false;
+                };
+            };
+            
+            defaultImg.onerror = function() {
+                element.style.backgroundImage = '';
+                element.style.backgroundColor = id.includes('joystick') ? 
+                    (id.includes('container') ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)') : 
+                    'rgba(255,255,255,0.15)';
+                const span = element.querySelector('span');
+                if(span) span.style.display = 'block';
+            };
+        });
+    }
+
+    function addButtonFeedback() {
+        document.querySelectorAll('.button:not(#toggle-button), #arrow-up, #arrow-down, #arrow-left, #arrow-right').forEach(element => {
+            const handleEvent = (state) => {
+                if (!element.dataset.hasPressed) return;
+                element.style.backgroundImage = state ? 
+                    `url(${element.dataset.pressedImg})` : 
+                    `url(${element.dataset.defaultImg})`;
+            };
+
+            element.addEventListener('touchstart', () => handleEvent(true));
+            element.addEventListener('touchend', () => handleEvent(false));
+            element.addEventListener('mousedown', () => handleEvent(true));
+            element.addEventListener('mouseup', () => handleEvent(false));
+            element.addEventListener('mouseleave', () => handleEvent(false));
+            element.addEventListener('pointerdown', () => handleEvent(true));
+            element.addEventListener('pointerup', () => handleEvent(false));
+            element.addEventListener('pointerleave', () => handleEvent(false));
+            element.addEventListener('pointercancel', () => handleEvent(false));
+        });
+    }
+    
+    function bindButtonAction(button, handler) {
+        if (!button)
+            return;
+        const supportsPointer = "onpointerup" in window;
+        if (supportsPointer) {
+            button.addEventListener('pointerup', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                handler(e);
+            }, { passive: false });
+        } else {
+            ['touchend', 'mouseup', 'click'].forEach(function (evt) {
+                button.addEventListener(evt, function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handler(e);
+                }, { passive: false });
+            });
+        }
+    }
+    
+    const joystick = document.getElementById('joystick-container');
+    const joystickHandle = document.getElementById('joystick-handle');
+    const joystickMk = document.getElementById('joystick-mk');
+    const buttons = {
+        z: document.getElementById('button-z'),
+        x: document.getElementById('button-x'),
+        c: document.getElementById('button-c'),
+        f2: document.getElementById('button-f2'),
+        f1: document.getElementById('button-f1'),
+        debug: document.getElementById('button-debug')
+    };
+    const toggleButtonElement = document.getElementById('toggle-button');
+    const arrowIds = ['arrow-left', 'arrow-right', 'arrow-up', 'arrow-down'];
+    const arrowElements = arrowIds.map(id => document.getElementById(id));
+    const primaryButtonIds = ['button-z', 'button-x', 'button-c', 'button-f2', 'button-f1', 'button-debug', 'toggle-button'];
+    const buttonElements = primaryButtonIds.map(id => document.getElementById(id)).filter(Boolean);
+    const canvasContainer = document.getElementById('c2canvasdiv');
+    const keyboardSetButton = document.getElementById('keyboard-set');
+    const textScaleButton = document.getElementById('text-scale');
+    const textOpacityButton = document.getElementById('text-opacity');
+    const textJoystickScaleButton = document.getElementById('text-joystickscale');
+    const textResetButton = document.getElementById('text-reset');
+    const settingsPanel = document.getElementById('settings-panel');
+    const settingsOverlay = document.getElementById('settings-overlay');
+    const TEXT_BUTTON_IDS = new Set(['text-scale', 'text-opacity', 'text-reset', 'text-joystickscale']);
+    const SETTINGS_BUTTON_IDS = new Set(['keyboard-set', 'text-scale', 'text-opacity', 'text-reset', 'text-joystickscale']);
+    const NON_DRAGGABLE_IDS = new Set(['text-scale', 'text-opacity', 'text-reset', 'text-joystickscale']);
+    const JOYSTICK_IDS = ['joystick-container', 'joystick-handle', 'joystick-mk'];
+    const JOYSTICK_DRAGGABLE_IDS = new Set(['joystick-container', 'joystick-mk']);
+    let positionableElements = [];
+    let generalScaleElements = [];
+    let joystickScaleElements = [];
+    let opacityElements = [];
+    const JOYSTICK_THRESHOLD = 20;
+    const JOYSTICK_MAX_MAG = 50;
+    const JOYSTICK_OFFSET = 25;
+    let currentLayout = 1;
+    let joystickTouchId = null;
+    let joystickMouseActive = false;
+    let joystickCenter = { x: 0, y: 0 };
+    let joystickMkTouchId = null;
+    let joystickMkMouseActive = false;
+    let joystickMkCenter = { x: 0, y: 0 };
+    
+    // Definindo a área ampliada do joystick
+    const joystickArea = {
+        left: 0,
+        right: 450,
+        top: 100,
+        bottom: 400
+    };
+
+    const keyMap = {
+        'arrow-left': 37,
+        'arrow-right': 39,
+        'arrow-up': 38,
+        'arrow-down': 40,
+        'button-z': 90,
+        'button-x': 88,
+        'button-c': 67,
+        'button-f2': 113,
+        'button-f1': 112
+    };
+
+    function triggerKey(code, type = "keydown") {
+        document.dispatchEvent(new KeyboardEvent(type, {
+            keyCode: code,
+            which: code,
+            bubbles: true
+        }));
+    }
+
+    // Função para verificar se o toque está na área ampliada do joystick
+    function isInJoystickArea(point) {
+        if (joystick.style.display !== 'block')
+            return false;
+        return point.clientX >= joystickArea.left && point.clientX <= joystickArea.right &&
+               point.clientY >= joystickArea.top && point.clientY <= joystickArea.bottom;
+    }
+
+    // Configura os botões padrão
+    for (let id in buttons) {
+        if (id === 'debug') continue;
+
+        const button = buttons[id];
+        const keyCode = keyMap[`button-${id}`];
+
+        button.addEventListener('touchstart', () => triggerKey(keyCode, 'keydown'));
+        button.addEventListener('touchend', () => triggerKey(keyCode, 'keyup'));
+    }
+
+    function simulateKey(eventType, keyCode) {
+        document.dispatchEvent(new KeyboardEvent(eventType, { keyCode, bubbles: true }));
+    }
+
+    function releaseDirectionalKeys() {
+        [37, 38, 39, 40].forEach(k => simulateKey('keyup', k));
+    }
+
+    function setLayoutClass(cls) {
+        document.body.classList.remove('layout2', 'layout3', 'layout4');
+        if (cls)
+            document.body.classList.add(cls);
+    }
+
+    function setButtonsVisible(visible) {
+        buttonElements.forEach(el => {
+            if (!el || el === toggleButtonElement)
+                return;
+            el.style.display = visible ? 'block' : 'none';
+        });
+        if (toggleButtonElement)
+            toggleButtonElement.style.display = 'block';
+    }
+
+    function setArrowsVisible(visible) {
+        arrowElements.forEach(el => {
+            if (el)
+                el.style.display = visible ? 'block' : 'none';
+        });
+    }
+
+    function hideJoystickHardware() {
+        joystick.style.display = 'none';
+        joystickHandle.style.display = 'none';
+        resetJoystickPosition();
+    }
+    
+    const STORAGE_KEY = 'c2_button_layouts_v1';
+    const SCALE_MIN = 0.5;
+    const SCALE_MAX = 1.5;
+    const SCALE_STEP = 0.1;
+    const OPACITY_MIN = 0.1;
+    const OPACITY_MAX = 1;
+    const OPACITY_STEP = 0.1;
+    let layoutSettings = loadLayoutSettings();
+    [1, 2, 3, 4].forEach(ensureLayoutState);
+    let currentScale = 1;
+    let currentJoystickScale = 1;
+    let currentOpacity = 0.7;
+    let isSettingsMode = false;
+    let dragState = null;
+    let saveTimeoutId = null;
+    
+    function loadLayoutSettings() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw)
+                return JSON.parse(raw);
+        } catch (err) {
+            console.warn('Failed to parse layout settings', err);
+        }
+        return {};
+    }
+    
+    function getDefaultLayoutState() {
+        return { positions: {}, scale: 1, joystickScale: 1, opacity: 0.7 };
+    }
+    
+    function ensureLayoutState(layout) {
+        if (!layoutSettings[layout])
+            layoutSettings[layout] = getDefaultLayoutState();
+        const state = layoutSettings[layout];
+        if (typeof state.scale !== 'number')
+            state.scale = 1;
+        if (typeof state.joystickScale !== 'number')
+            state.joystickScale = 1;
+        if (typeof state.opacity !== 'number')
+            state.opacity = 0.7;
+        if (!state.positions)
+            state.positions = {};
+        return state;
+    }
+    
+    function saveLayoutSettings() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(layoutSettings));
+        } catch (err) {
+            console.warn('Failed to save layout settings', err);
+        }
+    }
+    
+    function scheduleSave() {
+        clearTimeout(saveTimeoutId);
+        saveTimeoutId = setTimeout(saveLayoutSettings, 250);
+    }
+    
+    function setElementTransformOffsets(element, x, y) {
+        element.dataset.translateX = x;
+        element.dataset.translateY = y;
+        element.style.setProperty('--btn-translate-x', `${x}px`);
+        element.style.setProperty('--btn-translate-y', `${y}px`);
+    }
+    
+    function getElementTransformOffsets(element) {
+        return {
+            x: parseFloat(element.dataset.translateX || '0'),
+            y: parseFloat(element.dataset.translateY || '0')
+        };
+    }
+    
+    function applyScale(elements, scale) {
+        elements.forEach(function (el) {
+            if (!el)
+                return;
+            el.style.setProperty('--btn-scale', scale);
+        });
+    }
+    
+    function applyOpacity(elements, opacity) {
+        elements.forEach(function (el) {
+            if (!el)
+                return;
+            el.style.opacity = opacity;
+        });
+    }
+    
+    function applyLayoutSettings(layout) {
+        const state = ensureLayoutState(layout);
+        currentScale = state.scale;
+        currentJoystickScale = state.joystickScale;
+        currentOpacity = state.opacity;
+        positionableElements.forEach(el => {
+            const stored = state.positions[el.id];
+            if (stored)
+                setElementTransformOffsets(el, stored.x, stored.y);
+            else
+                setElementTransformOffsets(el, 0, 0);
+        });
+        applyScale(generalScaleElements, currentScale);
+        applyScale(joystickScaleElements, currentJoystickScale);
+        applyOpacity(opacityElements, currentOpacity);
+    }
+    
+    function recordElementPosition(element, x, y) {
+        if (!element.id)
+            return;
+        const state = ensureLayoutState(currentLayout);
+        state.positions[element.id] = { x, y };
+        scheduleSave();
+    }
+    
+    function canDragElement(element) {
+        if (!element)
+            return false;
+        if (NON_DRAGGABLE_IDS.has(element.id))
+            return false;
+        return element.classList.contains('button') || element.classList.contains('arrow') || JOYSTICK_DRAGGABLE_IDS.has(element.id);
+    }
+    
+    function beginDrag(element, clientX, clientY, pointerId, pointerType) {
+        if (!isSettingsMode || dragState || !canDragElement(element))
+            return false;
+        const offsets = getElementTransformOffsets(element);
+        dragState = {
+            element,
+            startX: clientX,
+            startY: clientY,
+            baseX: offsets.x,
+            baseY: offsets.y,
+            pointerId,
+            pointerType
+        };
+        return true;
+    }
+    
+    function updateDragPosition(clientX, clientY) {
+        if (!dragState)
+            return;
+        const deltaX = clientX - dragState.startX;
+        const deltaY = clientY - dragState.startY;
+        const newX = dragState.baseX + deltaX;
+        const newY = dragState.baseY + deltaY;
+        setElementTransformOffsets(dragState.element, newX, newY);
+        recordElementPosition(dragState.element, newX, newY);
+    }
+    
+    function endActiveDrag(pointerId) {
+        if (!dragState)
+            return;
+        if (pointerId !== undefined && dragState.pointerId !== pointerId)
+            return;
+        dragState = null;
+    }
+    
+    function enterSettingsMode() {
+        if (isSettingsMode)
+            return;
+        isSettingsMode = true;
+        settingsOverlay.style.display = 'block';
+        settingsPanel.style.display = 'flex';
+        document.body.classList.add('settings-mode');
+        stopMkControl();
+        joystickMouseActive = false;
+        joystickTouchId = null;
+        resetJoystickPosition();
+    }
+    
+    function exitSettingsMode(save) {
+        if (!isSettingsMode)
+            return;
+        isSettingsMode = false;
+        settingsOverlay.style.display = 'none';
+        settingsPanel.style.display = 'none';
+        document.body.classList.remove('settings-mode');
+        endActiveDrag();
+        if (save)
+            saveLayoutSettings();
+    }
+    
+    function toggleSettingsMode() {
+        if (isSettingsMode)
+            exitSettingsMode(true);
+        else
+            enterSettingsMode();
+    }
+    
+    function cycleScale() {
+        const state = ensureLayoutState(currentLayout);
+        let next = +(state.scale + SCALE_STEP).toFixed(2);
+        if (next > SCALE_MAX)
+            next = SCALE_MIN;
+        state.scale = next;
+        applyLayoutSettings(currentLayout);
+        scheduleSave();
+    }
+    
+    function cycleOpacity() {
+        const state = ensureLayoutState(currentLayout);
+        let next = +(state.opacity + OPACITY_STEP).toFixed(2);
+        if (next > OPACITY_MAX)
+            next = OPACITY_MIN;
+        state.opacity = next;
+        applyLayoutSettings(currentLayout);
+        scheduleSave();
+    }
+    
+    function cycleJoystickScale() {
+        const state = ensureLayoutState(currentLayout);
+        let next = +(state.joystickScale + SCALE_STEP).toFixed(2);
+        if (next > SCALE_MAX)
+            next = SCALE_MIN;
+        state.joystickScale = next;
+        applyLayoutSettings(currentLayout);
+        scheduleSave();
+    }
+    
+    function resetLayoutAdjustments() {
+        const state = ensureLayoutState(currentLayout);
+        state.positions = {};
+        state.scale = 1;
+        state.joystickScale = 1;
+        state.opacity = 0.7;
+        applyLayoutSettings(currentLayout);
+        scheduleSave();
+    }
+    
+    bindButtonAction(keyboardSetButton, toggleSettingsMode);
+    bindButtonAction(textScaleButton, function () {
+        if (isSettingsMode)
+            cycleScale();
+    });
+    bindButtonAction(textOpacityButton, function () {
+        if (isSettingsMode)
+            cycleOpacity();
+    });
+    bindButtonAction(textJoystickScaleButton, function () {
+        if (isSettingsMode)
+            cycleJoystickScale();
+    });
+    bindButtonAction(textResetButton, function () {
+        if (isSettingsMode)
+            resetLayoutAdjustments();
+    });
+    
+    window.addEventListener('beforeunload', saveLayoutSettings);
+
+    function cacheJoystickCenter() {
+        const rect = joystick.getBoundingClientRect();
+        joystickCenter = {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        };
+    }
+    
+    function setAxisState(delta, positiveKey, negativeKey) {
+        if (delta > JOYSTICK_THRESHOLD) {
+            simulateKey('keydown', positiveKey);
+            simulateKey('keyup', negativeKey);
+        } else if (delta < -JOYSTICK_THRESHOLD) {
+            simulateKey('keydown', negativeKey);
+            simulateKey('keyup', positiveKey);
+        } else {
+            simulateKey('keyup', positiveKey);
+            simulateKey('keyup', negativeKey);
+        }
+    }
+    
+    function applyJoystickDelta(deltaX, deltaY) {
+        const magnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const scale = magnitude > JOYSTICK_MAX_MAG ? JOYSTICK_MAX_MAG / magnitude : 1;
+        joystickHandle.style.left = JOYSTICK_OFFSET + deltaX * scale + 'px';
+        joystickHandle.style.top = JOYSTICK_OFFSET + deltaY * scale + 'px';
+        setAxisState(deltaX, 39, 37);
+        setAxisState(deltaY, 40, 38);
+    }
+    
+    function updateJoystickFromPoint(clientX, clientY) {
+        if (isSettingsMode)
+            return;
+        const deltaX = clientX - joystickCenter.x;
+        const deltaY = clientY - joystickCenter.y;
+        applyJoystickDelta(deltaX, deltaY);
+    }
+    
+    function resetJoystickPosition() {
+        joystickHandle.style.left = JOYSTICK_OFFSET + 'px';
+        joystickHandle.style.top = JOYSTICK_OFFSET + 'px';
+        releaseDirectionalKeys();
+    }
+    
+    function cacheJoystickMkCenter() {
+        const rect = joystickMk.getBoundingClientRect();
+        joystickMkCenter = {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        };
+    }
+    
+    function updateJoystickMkFromPoint(clientX, clientY) {
+        if (isSettingsMode || currentLayout !== 3)
+            return;
+        const deltaX = clientX - joystickMkCenter.x;
+        const deltaY = clientY - joystickMkCenter.y;
+        setAxisState(deltaX, 39, 37);
+        setAxisState(deltaY, 40, 38);
+    }
+    
+    function stopMkControl() {
+        if (joystickMkMouseActive) {
+            joystickMkMouseActive = false;
+            document.removeEventListener('mousemove', onJoystickMkMouseMove);
+            document.removeEventListener('mouseup', onJoystickMkMouseUp);
+        }
+        joystickMkTouchId = null;
+        releaseDirectionalKeys();
+    }
+    
+    function onJoystickMouseDown(e) {
+        if (isSettingsMode || e.button !== 0 || joystick.style.display === 'none')
+            return;
+        e.preventDefault();
+        joystickMouseActive = true;
+        cacheJoystickCenter();
+        updateJoystickFromPoint(e.clientX, e.clientY);
+        document.addEventListener('mousemove', onJoystickMouseMove);
+        document.addEventListener('mouseup', onJoystickMouseUp);
+    }
+    
+    function onJoystickMouseMove(e) {
+        if (!joystickMouseActive || isSettingsMode)
+            return;
+        e.preventDefault();
+        updateJoystickFromPoint(e.clientX, e.clientY);
+    }
+    
+    function onJoystickMouseUp(e) {
+        if (!joystickMouseActive)
+            return;
+        e.preventDefault();
+        joystickMouseActive = false;
+        resetJoystickPosition();
+        document.removeEventListener('mousemove', onJoystickMouseMove);
+        document.removeEventListener('mouseup', onJoystickMouseUp);
+    }
+    
+    joystick.addEventListener('mousedown', onJoystickMouseDown);
+    
+    function onJoystickMkMouseDown(e) {
+        if (isSettingsMode || e.button !== 0 || currentLayout !== 3 || joystickMkMouseActive)
+            return;
+        if (e.target.closest('.button'))
+            return;
+        if (e.clientX > window.innerWidth / 2)
+            return;
+        e.preventDefault();
+        joystickMkMouseActive = true;
+        cacheJoystickMkCenter();
+        updateJoystickMkFromPoint(e.clientX, e.clientY);
+        document.addEventListener('mousemove', onJoystickMkMouseMove);
+        document.addEventListener('mouseup', onJoystickMkMouseUp);
+    }
+    
+    function onJoystickMkMouseMove(e) {
+        if (!joystickMkMouseActive || currentLayout !== 3 || isSettingsMode)
+            return;
+        e.preventDefault();
+        if (e.clientX > window.innerWidth / 2) {
+            stopMkControl();
+            return;
+        }
+        updateJoystickMkFromPoint(e.clientX, e.clientY);
+    }
+    
+    function onJoystickMkMouseUp(e) {
+        if (!joystickMkMouseActive)
+            return;
+        e.preventDefault();
+        stopMkControl();
+    }
+    
+    document.addEventListener('mousedown', onJoystickMkMouseDown);
+
+    // Initialize layout on page load
+    window.onload = () => {
+        initializeButtonText();
+        loadControlImages();
+        computeAdjustableElements();
+        addButtonFeedback();
+        
+        try {
+            cr_createRuntime("c2canvas");
+        } catch (err) {
+            const errorMsg = document.createElement('div');
+            errorMsg.style.cssText = 'color: #fff; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;';
+            errorMsg.innerHTML = 'Failed to load the game. Please ensure all game assets are correctly included.';
+            document.body.appendChild(errorMsg);
+        }
+        showLayout1();
+    };
+
+    // Functions to switch layouts
+    function showLayout1() {
+        currentLayout = 1;
+        setLayoutClass('');
+        joystick.style.display = 'block';
+        joystickHandle.style.display = 'block';
+        joystickMk.style.display = 'none';
+        setButtonsVisible(true);
+        setArrowsVisible(false);
+        stopMkControl();
+        applyLayoutSettings(currentLayout);
+    }
+
+    function showLayout2() {
+        currentLayout = 2;
+        setLayoutClass('layout2');
+        hideJoystickHardware();
+        joystickMk.style.display = 'none';
+        setButtonsVisible(true);
+        setArrowsVisible(true);
+        stopMkControl();
+        applyLayoutSettings(currentLayout);
+    }
+    
+    function showLayout3() {
+        currentLayout = 3;
+        setLayoutClass('layout3');
+        hideJoystickHardware();
+        joystickMk.style.display = 'block';
+        setButtonsVisible(true);
+        setArrowsVisible(false);
+        stopMkControl();
+        applyLayoutSettings(currentLayout);
+    }
+    
+    function showLayout4() {
+        currentLayout = 4;
+        setLayoutClass('layout4');
+        hideJoystickHardware();
+        joystickMk.style.display = 'none';
+        setButtonsVisible(false);
+        setArrowsVisible(false);
+        stopMkControl();
+        applyLayoutSettings(currentLayout);
+    }
+    
+    function cycleLayout() {
+        switch (currentLayout) {
+            case 1:
+                showLayout2();
+                break;
+            case 2:
+                showLayout3();
+                break;
+            case 3:
+                showLayout4();
+                break;
+            default:
+                showLayout1();
+        }
+    }
+
+    // Special handling for toggle button
+    let toggleCycleScheduled = false;
+    
+    function triggerToggleCycle() {
+        if (toggleCycleScheduled)
+            return;
+        toggleCycleScheduled = true;
+        setTimeout(function () {
+            toggleCycleScheduled = false;
+            cycleLayout();
+        }, 0);
+    }
+    
+    function handleToggleButton(buttonElement, eventType) {
+        if (eventType === 'touchstart' || eventType === 'mousedown') {
+            if (buttonElement.dataset?.hasPressed === "true") {
+                buttonElement.style.backgroundImage = `url(${buttonElement.dataset.pressedImg})`;
+            } else {
+                buttonElement.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
+            }
+        } 
+        else if (eventType === 'touchend' || eventType === 'mouseup' || eventType === 'touchcancel') {
+            if (buttonElement.dataset?.hasPressed === "true") {
+                buttonElement.style.backgroundImage = `url(${buttonElement.dataset.defaultImg})`;
+            } else {
+                buttonElement.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+            }
+            
+            if (eventType === 'touchend' || eventType === 'mouseup')
+                triggerToggleCycle();
+        }
+    }
+    
+    const activeButtonTouches = {};
+    let toggleButtonActive = false;
+    let debugButtonPressed = false;
+
+    if (toggleButtonElement) {
+        const onTogglePointerDown = function (e) {
+            e.preventDefault();
+            toggleButtonActive = true;
+            handleToggleButton(toggleButtonElement, 'mousedown');
+        };
+        const onTogglePointerUp = function (e) {
+            if (!toggleButtonActive)
+                return;
+            e.preventDefault();
+            handleToggleButton(toggleButtonElement, 'mouseup');
+            toggleButtonActive = false;
+        };
+        const onTogglePointerCancel = function (e) {
+            if (!toggleButtonActive)
+                return;
+            e.preventDefault();
+            handleToggleButton(toggleButtonElement, 'touchcancel');
+            toggleButtonActive = false;
+        };
+        const supportsPointer = "onpointerup" in window;
+        if (supportsPointer) {
+            toggleButtonElement.addEventListener('pointerdown', onTogglePointerDown, { passive: false });
+            toggleButtonElement.addEventListener('pointerup', onTogglePointerUp, { passive: false });
+            toggleButtonElement.addEventListener('pointercancel', onTogglePointerCancel, { passive: false });
+            toggleButtonElement.addEventListener('pointerleave', onTogglePointerCancel, { passive: false });
+        } else {
+            toggleButtonElement.addEventListener('touchstart', onTogglePointerDown, { passive: false });
+            toggleButtonElement.addEventListener('touchend', onTogglePointerUp, { passive: false });
+            toggleButtonElement.addEventListener('touchcancel', onTogglePointerCancel, { passive: false });
+            toggleButtonElement.addEventListener('mousedown', onTogglePointerDown, { passive: false });
+            toggleButtonElement.addEventListener('mouseup', onTogglePointerUp, { passive: false });
+            toggleButtonElement.addEventListener('mouseleave', onTogglePointerCancel, { passive: false });
+        }
+    }
+
+    function getButtonUnderTouch(touch) {
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (element && (element.classList.contains('button') || 
+                        element.classList.contains('arrow') || 
+                        element.id === 'joystick-container' ||
+                        element.id === 'joystick-handle' ||
+                        element.id === 'joystick-mk')) {
+            if (element.id === 'joystick-handle') {
+                return document.getElementById('joystick-container');
+            }
+            return element;
+        }
+        return null;
+    }
+
+    function activateButton(buttonElement, touch) {
+        if (!buttonElement) return;
+        if (isSettingsMode && (!buttonElement.id || !SETTINGS_BUTTON_IDS.has(buttonElement.id))) {
+            beginDrag(buttonElement, touch ? touch.clientX : 0, touch ? touch.clientY : 0, touch ? touch.identifier : null, touch ? 'touch' : 'mouse');
+            return;
+        }
+        
+        if (buttonElement.id === 'toggle-button') {
+            handleToggleButton(buttonElement, 'touchstart');
+            toggleButtonActive = true;
+            return;
+        }
+        
+        if (buttonElement.id === 'button-debug') {
+            // Mostra o sprite pressionado
+            if (buttonElement.dataset?.hasPressed === "true") {
+                buttonElement.style.backgroundImage = `url(${buttonElement.dataset.pressedImg})`;
+            } else {
+                buttonElement.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
+            }
+            
+            triggerKey(68, 'keydown'); // D
+            triggerKey(66, 'keydown'); // B
+            triggerKey(71, 'keydown'); // G
+            return;
+        }
+        
+        if (buttonElement.dataset?.hasPressed === "true") {
+            buttonElement.style.backgroundImage = `url(${buttonElement.dataset.pressedImg})`;
+        }
+        
+        const buttonId = buttonElement.id;
+        if (keyMap[buttonId]) {
+            simulateKey('keydown', keyMap[buttonId]);
+        }
+    }
+
+    function deactivateButton(buttonElement, touch) {
+        if (!buttonElement) return;
+        if (isSettingsMode && (!buttonElement.id || !SETTINGS_BUTTON_IDS.has(buttonElement.id)))
+            return;
+        
+        if (buttonElement.id === 'toggle-button') {
+            handleToggleButton(buttonElement, 'touchend');
+            toggleButtonActive = false;
+            return;
+        }
+        
+        if (buttonElement.id === 'button-debug') {
+            // Volta ao sprite normal
+            if (buttonElement.dataset?.hasPressed === "true") {
+                buttonElement.style.backgroundImage = `url(${buttonElement.dataset.defaultImg})`;
+            } else {
+                buttonElement.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+            }
+            
+            triggerKey(68, 'keyup');
+            triggerKey(66, 'keyup');
+            triggerKey(71, 'keyup');
+            return;
+        }
+        
+        if (buttonElement.dataset?.hasPressed === "true") {
+            buttonElement.style.backgroundImage = `url(${buttonElement.dataset.defaultImg})`;
+        }
+        
+        const buttonId = buttonElement.id;
+        if (keyMap[buttonId]) {
+            simulateKey('keyup', keyMap[buttonId]);
+        }
+    }
+
+    document.addEventListener("touchstart", function(e) {
+        for (let touch of e.changedTouches) {
+            const button = getButtonUnderTouch(touch);
+            const buttonId = button ? button.id : '';
+            
+            if (isSettingsMode) {
+                if (button && SETTINGS_BUTTON_IDS.has(buttonId)) {
+                    continue;
+                }
+                if (button && beginDrag(button, touch.clientX, touch.clientY, touch.identifier, 'touch')) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                } else {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                }
+                continue;
+            }
+            
+            if (currentLayout === 3 && joystickMkTouchId === null && touch.clientX <= window.innerWidth / 2 && !touch.target.closest('.button')) {
+                joystickMkTouchId = touch.identifier;
+                cacheJoystickMkCenter();
+                updateJoystickMkFromPoint(touch.clientX, touch.clientY);
+                e.preventDefault();
+                continue;
+            }
+            // Verifica se o toque está na área ampliada do joystick
+            if (isInJoystickArea(touch)) {
+                activateJoystick(touch);
+                e.preventDefault();
+                continue;
+            }
+            
+            if (button) {
+                if (SETTINGS_BUTTON_IDS.has(buttonId))
+                    continue;
+                activeButtonTouches[touch.identifier] = button;
+                activateButton(button, touch);
+                e.preventDefault();
+            }
+        }
+    }, { passive: false, capture: true });
+
+    function activateJoystick(touch) {
+        if (isSettingsMode)
+            return;
+        joystickTouchId = touch.identifier;
+        cacheJoystickCenter();
+        updateJoystickFromPoint(touch.clientX, touch.clientY);
+    }
+
+    document.addEventListener("touchmove", function(e) {
+        for (let touch of e.changedTouches) {
+            if (dragState && dragState.pointerType === 'touch' && dragState.pointerId === touch.identifier) {
+                updateDragPosition(touch.clientX, touch.clientY);
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                continue;
+            }
+            
+            if (isSettingsMode) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                continue;
+            }
+            
+            if (touch.identifier === joystickMkTouchId) {
+                if (currentLayout === 3 && touch.clientX <= window.innerWidth / 2) {
+                    updateJoystickMkFromPoint(touch.clientX, touch.clientY);
+                } else {
+                    joystickMkTouchId = null;
+                    stopMkControl();
+                }
+                e.preventDefault();
+                continue;
+            }
+            if (touch.identifier === joystickTouchId) {
+                if (isInJoystickArea(touch)) {
+                    updateJoystickFromPoint(touch.clientX, touch.clientY);
+                } else {
+                    joystickTouchId = null;
+                    resetJoystickPosition();
+                }
+                e.preventDefault();
+                continue;
+            }
+            
+            const currentButton = activeButtonTouches[touch.identifier];
+            const newButton = getButtonUnderTouch(touch);
+            
+            // Verifica se o toque entrou na área do joystick
+            if (isInJoystickArea(touch)) {
+                // Se estava em um botão, desativa o botão
+                if (currentButton) {
+                    deactivateButton(currentButton, touch);
+                    delete activeButtonTouches[touch.identifier];
+                }
+                // Ativa o joystick
+                activateJoystick(touch);
+                e.preventDefault();
+                continue;
+            }
+            
+            if (currentButton && newButton && currentButton !== newButton) {
+                deactivateButton(currentButton, touch);
+                activateButton(newButton, touch);
+                activeButtonTouches[touch.identifier] = newButton;
+            }
+            else if (currentButton && !newButton) {
+                deactivateButton(currentButton, touch);
+                delete activeButtonTouches[touch.identifier];
+            }
+            else if (!currentButton && newButton) {
+                activateButton(newButton, touch);
+                activeButtonTouches[touch.identifier] = newButton;
+            }
+            
+            e.preventDefault();
+        }
+    }, { passive: false, capture: true });
+
+    document.addEventListener("touchend", function(e) {
+        for (let touch of e.changedTouches) {
+            if (dragState && dragState.pointerType === 'touch' && dragState.pointerId === touch.identifier) {
+                endActiveDrag(touch.identifier);
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                continue;
+            }
+            
+            if (isSettingsMode) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                continue;
+            }
+            
+            if (touch.identifier === joystickMkTouchId) {
+                joystickMkTouchId = null;
+                stopMkControl();
+                continue;
+            }
+            if (touch.identifier === joystickTouchId) {
+                joystickTouchId = null;
+                resetJoystickPosition();
+                continue;
+            }
+            
+            const button = activeButtonTouches[touch.identifier];
+            if (button) {
+                deactivateButton(button, touch);
+                delete activeButtonTouches[touch.identifier];
+            }
+            e.preventDefault();
+        }
+    }, { passive: false, capture: true });
+    
+    document.addEventListener('mousedown', function (e) {
+        if (!isSettingsMode)
+            return;
+        const target = e.target.closest('.button, .arrow, #joystick-container, #joystick-mk');
+        if (target && SETTINGS_BUTTON_IDS.has(target.id))
+            return;
+        if (target && beginDrag(target, e.clientX, e.clientY, null, 'mouse')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return;
+        }
+        e.preventDefault();
+        e.stopImmediatePropagation();
+    }, true);
+    
+    document.addEventListener('mousemove', function (e) {
+        if (!isSettingsMode)
+            return;
+        if (dragState && dragState.pointerType === 'mouse') {
+            updateDragPosition(e.clientX, e.clientY);
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return;
+        }
+        e.preventDefault();
+        e.stopImmediatePropagation();
+    }, true);
+    
+    document.addEventListener('mouseup', function (e) {
+        if (!isSettingsMode)
+            return;
+        if (dragState && dragState.pointerType === 'mouse') {
+            endActiveDrag();
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return;
+        }
+        e.preventDefault();
+        e.stopImmediatePropagation();
+    }, true);
+
+    function setDebugVisualState(isPressed) {
+        if (buttons.debug.dataset?.hasPressed === "true") {
+            buttons.debug.style.backgroundImage = `url(${isPressed ? buttons.debug.dataset.pressedImg : buttons.debug.dataset.defaultImg})`;
+        } else {
+            buttons.debug.style.backgroundColor = isPressed ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.3)';
+        }
+    }
+    
+    function handleDebugPress(e) {
+        e.preventDefault();
+        if (debugButtonPressed)
+            return;
+        debugButtonPressed = true;
+        setDebugVisualState(true);
+        triggerKey(68, 'keydown'); // D
+        triggerKey(66, 'keydown'); // B
+        triggerKey(71, 'keydown'); // G
+    }
+    
+    function handleDebugRelease(e) {
+        e.preventDefault();
+        if (!debugButtonPressed)
+            return;
+        debugButtonPressed = false;
+        setDebugVisualState(false);
+        triggerKey(68, 'keyup');
+        triggerKey(66, 'keyup');
+        triggerKey(71, 'keyup');
+    }
+    
+    ['touchstart', 'mousedown'].forEach(function(evt) {
+        buttons.debug.addEventListener(evt, handleDebugPress, { passive: false });
+    });
+    ['touchend', 'mouseup', 'mouseleave'].forEach(function(evt) {
+        buttons.debug.addEventListener(evt, handleDebugRelease, { passive: false });
+    });
+
+    Object.keys(keyMap).forEach(id => {
+        const element = document.getElementById(id);
+        const keyCode = keyMap[id];
+        let isPressed = false;
+        ['touchstart', 'mousedown'].forEach(evt => {
+            element.addEventListener(evt, e => {
+                e.preventDefault();
+                if (!isPressed) {
+                    simulateKey('keydown', keyCode);
+                    isPressed = true;
+                }
+            });
+        });
+        ['touchend', 'mouseup'].forEach(evt => {
+            element.addEventListener(evt, e => {
+                e.preventDefault();
+                simulateKey('keyup', keyCode);
+                isPressed = false;
+            });
+        });
+    });
+
+    document.addEventListener('touchmove', function(e) {
+        if (Object.keys(activeButtonTouches).length > 0 || joystickTouchId !== null || joystickMkTouchId !== null || (dragState && dragState.pointerType === 'touch')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    document.addEventListener('keydown', function(e) {
+        if ([37, 38, 39, 40].includes(e.keyCode)) {
+            e.preventDefault();
+        }
+    }, true);
+    </script>
+    <script>
+		// Start the Construct 2 project running on window load.
+		jQuery(document).ready(function ()
+		{			
+			// Create new runtime using the c2canvas
+			cr_createRuntime("c2canvas");
+		});
+		
+		// Pause and resume on page becoming visible/invisible
+		function onVisibilityChanged() {
+			if (document.hidden || document.mozHidden || document.webkitHidden || document.msHidden)
+				cr_setSuspended(true);
+			else
+				cr_setSuspended(false);
+		};
+		
+		document.addEventListener("visibilitychange", onVisibilityChanged, false);
+		document.addEventListener("mozvisibilitychange", onVisibilityChanged, false);
+		document.addEventListener("webkitvisibilitychange", onVisibilityChanged, false);
+		document.addEventListener("msvisibilitychange", onVisibilityChanged, false);
+		
+				
+		function OnRegisterSWError(e)
+		{
+			console.warn("Failed to register service worker: ", e);
+		};
+		
+		// Runtime calls this global method when ready to start caching (i.e. after startup).
+		// This registers the service worker which caches resources for offline support.
+		window.C2_RegisterSW = function C2_RegisterSW()
+		{
+			if (!navigator.serviceWorker)
+				return;		// no SW support, ignore call
+			
+			try {
+				navigator.serviceWorker.register("sw.js", { scope: "./" })
+				.then(function (reg)
+				{
+					console.log("Registered service worker on " + reg.scope);
+				})
+				.catch(OnRegisterSWError);
+			}
+			catch (e)
+			{
+				OnRegisterSWError(e);
+			}
+		};
+    </script>
+</body> 
+</html> 
